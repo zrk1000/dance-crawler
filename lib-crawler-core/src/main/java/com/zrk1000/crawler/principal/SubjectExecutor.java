@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created with IntelliJ IDEA.
+ * Subject构建器，类似builder模式的构建方式
  * User: zrk-PC
  * Date: 2017/9/6
  * Time: 16:30

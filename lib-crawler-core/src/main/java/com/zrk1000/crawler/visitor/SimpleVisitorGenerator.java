@@ -8,6 +8,7 @@ import okhttp3.Interceptor;
 import java.util.List;
 
 /**
+ * 访问器的构造器
  * @author zhouRongKang
  * @date 2017/11/10 18:48
  */

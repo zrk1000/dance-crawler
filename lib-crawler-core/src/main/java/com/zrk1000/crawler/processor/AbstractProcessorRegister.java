@@ -12,7 +12,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 处理器注册中心
+ * 爬虫业务处理器注册中心
  * 扫描项目中所有处理器
  * 存储格式：
  *      Map<domain,Map<method,PageProcessor>>

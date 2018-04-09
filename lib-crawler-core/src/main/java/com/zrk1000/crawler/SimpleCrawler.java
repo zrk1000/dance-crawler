@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 默认的爬虫实现
  * Created with IntelliJ IDEA.
  * User: zhouRongKang
  * Date: 2017/8/21
@@ -24,9 +25,21 @@ import java.util.List;
  */
 public abstract class SimpleCrawler<S extends Subject,T extends Ticket> implements Crawler<S, T> {
 
+    /**
+     * 处理器注册中心
+     */
     protected ProcessorRegister processorRegister;
+    /**
+     * 会话管理器
+     */
     protected SessionManager sessionManager;
+    /**
+     * 访问器的生成器
+     */
     protected VisitorGenerator visitorGenerator;
+    /**
+     * 处理结果的管道
+     */
     protected List<Pipeline> pipelines;
 
     public SimpleCrawler() {

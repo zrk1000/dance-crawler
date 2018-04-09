@@ -16,7 +16,7 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.TimeUnit;
 
 /**
- *
+ * OKhttp连接池
  * Created by moonie on 2017/8/22.
  */
 public class OKHttpPool {

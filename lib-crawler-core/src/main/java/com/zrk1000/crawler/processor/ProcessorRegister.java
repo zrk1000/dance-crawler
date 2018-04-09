@@ -3,7 +3,7 @@ package com.zrk1000.crawler.processor;
 import java.util.Map;
 
 /**
- * 处理器注册中心接口
+ * 解析处理器注册中心接口
  * User: zhouRongKang
  * Date: 2017/8/31
  * Time: 9:56

@@ -75,6 +75,7 @@ public class BeanConfiguration {
         SimpleSessionManager simpleSessionManager = new SimpleSessionManager();
         simpleSessionManager.setSessionDao(sessionDao);
         simpleSessionManager.setTimout(timeout);
+        simpleSessionManager.setEnableVlidationScheduler(false);
         return simpleSessionManager;
     }
 

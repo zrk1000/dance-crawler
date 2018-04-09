@@ -4,6 +4,7 @@ import com.zrk1000.crawler.principal.Subject;
 import com.zrk1000.crawler.principal.Ticket;
 
 /**
+ * 爬虫对象接口
  * Created with IntelliJ IDEA.
  * User: zhouRongKang
  * Date: 2017/8/31

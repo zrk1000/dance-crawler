@@ -7,6 +7,10 @@ package com.zrk1000.crawler.visitor;
  */
 public interface VisitorGenerator {
 
+    /**
+     * 构造一个访问器
+     * @return
+     */
     Visitor generate();
 
 }

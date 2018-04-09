@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.UUID;
 
 /**
+ * session管理器
  * Created with IntelliJ IDEA.
  * User: zhouRongKang
  * Date: 2017/8/21
@@ -13,6 +14,11 @@ import java.util.UUID;
 public class SimpleSessionManager implements SessionManager {
 
     public static long DEFAULT_SESSION_TIMEOUT = 1 * 60 * 1000;
+
+    /**
+     * 启用session过期定时扫码
+     */
+    private boolean enableVlidationScheduler = true;
 
     private SessionDao sessionDao;
 
@@ -32,7 +38,7 @@ public class SimpleSessionManager implements SessionManager {
 
     @Override
     public Session getSession(String sessionId) {
-        if(!validationScheduler.isEnabled()){
+        if(enableVlidationScheduler && !validationScheduler.isEnabled()){
             validationScheduler.validateSessions();
         }
         Session session = null;
@@ -88,6 +94,14 @@ public class SimpleSessionManager implements SessionManager {
             return lastAccessTime.before(expireTime);
         }
         return false;
+    }
+
+    public boolean isEnableVlidationScheduler() {
+        return enableVlidationScheduler;
+    }
+
+    public void setEnableVlidationScheduler(boolean enableVlidationScheduler) {
+        this.enableVlidationScheduler = enableVlidationScheduler;
     }
 }
 

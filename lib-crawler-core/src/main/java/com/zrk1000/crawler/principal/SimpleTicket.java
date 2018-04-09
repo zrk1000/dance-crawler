@@ -3,7 +3,7 @@ package com.zrk1000.crawler.principal;
 import java.io.Serializable;
 
 /**
- * 访问者token
+ * 访问者票据
  * Created by rongkang on 2017-08-20.
  */
 public class SimpleTicket implements Ticket,Serializable {

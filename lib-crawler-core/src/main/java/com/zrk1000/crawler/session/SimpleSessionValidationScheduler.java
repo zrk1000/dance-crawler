@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * session过期校验任务
  * Created by rongkang on 2017-09-03.
  */
 public class SimpleSessionValidationScheduler implements SessionValidationScheduler ,Runnable{
