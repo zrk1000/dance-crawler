@@ -1,7 +1,9 @@
 package com.zrk1000.crawler.visitor.okhttp;
 
 import com.zrk1000.crawler.session.Session;
+import com.zrk1000.crawler.util.HttpCookieUtils;
 import com.zrk1000.crawler.util.RootDomainUtils;
+import com.zrk1000.crawler.visitor.http.HttpCookie;
 import okhttp3.Cookie;
 import okhttp3.CookieJar;
 import okhttp3.HttpUrl;
@@ -32,31 +34,41 @@ public class OkHttpSessionCookieJar implements CookieJar {
         if (logger.isDebugEnabled()) {
             logger.debug("\nwrite cookies:" + httpUrl.host() + " --> " + cookies);
         }
-        HashMap<String, List<OkHttpSerializableCookies>> cookieStore = (HashMap<String, List<OkHttpSerializableCookies>>) session.getCookies();
+        Map<String, List<HttpCookie>> cookieStore = session.getCookies();
         if (cookieStore == null) {
             cookieStore = new HashMap();
         }
-        cookieStore.put(httpUrl.host(), cookiesSerial(cookies));
-        //保存根域名cookie
+        List<HttpCookie> httpCookies = cookieStore.get(httpUrl.host());
+        httpCookies = HttpCookieUtils.addCookie(httpCookies, HttpCookieUtils.cookies2HttpCookies(cookies));
+        cookieStore.put(httpUrl.host(), httpCookies);
+
+        /**保存根域名cookie*/
         String rootDomain = RootDomainUtils.getRootDomain(httpUrl.host());
-        List<Cookie> rootDomainCookieList = new ArrayList();
+        List<Cookie> rootDomainCookies = new ArrayList();
         for (Cookie cookie : cookies) {
             if (cookie.domain().equals(rootDomain)) {
-                rootDomainCookieList.add(cookie);
+                rootDomainCookies.add(cookie);
             }
         }
-        if (!rootDomainCookieList.isEmpty()) {
-            cookieStore.put(rootDomain, cookiesSerial(rootDomainCookieList));
+        if (!rootDomainCookies.isEmpty()) {
+            List<HttpCookie> rootHttpCookies = cookieStore.get(rootDomain);
+            cookieStore.put(rootDomain, HttpCookieUtils.addCookie(rootHttpCookies,HttpCookieUtils.cookies2HttpCookies(rootDomainCookies)));
         }
         session.setCookies(cookieStore);
 
     }
 
+    public static void main(String[] args) {
+        Map<String, List<HttpCookie>> cookieStore  =  new HashMap();
+        List<HttpCookie> httpCookies = cookieStore.get("123");
+        System.out.println(httpCookies);
+    }
+
     @Override
     public List<Cookie> loadForRequest(HttpUrl httpUrl) {
-        Map<String, List<OkHttpSerializableCookies>> cookieStore = (Map<String, List<OkHttpSerializableCookies>>) session.getCookies();
+        Map<String, List<HttpCookie>> cookieStore = session.getCookies();
         List<Cookie> cookies = loadCookie(cookieStore, httpUrl.host());
-        //加载根域名的cookie
+        /**加载根域名的cookie*/
         String rootDomain = RootDomainUtils.getRootDomain(httpUrl.host());
         if (rootDomain != null) {
             List<Cookie> cookieList = loadCookie(cookieStore, rootDomain);
@@ -72,6 +84,8 @@ public class OkHttpSessionCookieJar implements CookieJar {
         return cookies;
     }
 
+
+
     /**
      * 获取cookieStore中的对应的cookie
      *
@@ -79,46 +93,14 @@ public class OkHttpSessionCookieJar implements CookieJar {
      * @param host
      * @return
      */
-    private List<Cookie> loadCookie(Map<String, List<OkHttpSerializableCookies>> cookieStore, String host) {
+    private List<Cookie> loadCookie(Map<String, List<HttpCookie>> cookieStore, String host) {
         if (cookieStore == null) {
             return new ArrayList();
         }
-        List<OkHttpSerializableCookies> cookies = cookieStore.get(host);
-        List<Cookie> cookiesUnSerial = cookies == null ? new ArrayList() : cookiesUnSerial(cookies);
-        return cookiesUnSerial;
+        List<HttpCookie> httpCookies = cookieStore.get(host);
+        List<Cookie> cookies = httpCookies == null ? new ArrayList() : HttpCookieUtils.httpCookies2cookies(httpCookies);
+        return cookies;
     }
 
-    /**
-     * cookie转为可序列化的OkHttpSerializableCookies
-     *
-     * @param cookies
-     * @return
-     */
-    private List<OkHttpSerializableCookies> cookiesSerial(List<Cookie> cookies) {
-        if (cookies == null) {
-            return null;
-        }
-        List<OkHttpSerializableCookies> cookiesList = new ArrayList();
-        for (Cookie cookie : cookies) {
-            cookiesList.add(new OkHttpSerializableCookies(cookie));
-        }
-        return cookiesList;
-    }
 
-    /**
-     * OkHttpSerializableCookies转化为cookie
-     *
-     * @param cookies
-     * @return
-     */
-    private List<Cookie> cookiesUnSerial(List<OkHttpSerializableCookies> cookies) {
-        if (cookies == null) {
-            return null;
-        }
-        List<Cookie> cookiesList = new ArrayList();
-        for (OkHttpSerializableCookies cookie : cookies) {
-            cookiesList.add(cookie.getCookies());
-        }
-        return cookiesList;
-    }
 }

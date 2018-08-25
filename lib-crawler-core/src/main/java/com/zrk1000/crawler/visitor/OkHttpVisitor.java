@@ -5,14 +5,14 @@ import com.zrk1000.crawler.principal.Ticket;
 import com.zrk1000.crawler.principal.TicketAware;
 import com.zrk1000.crawler.session.Session;
 import com.zrk1000.crawler.session.SessionAware;
+import com.zrk1000.crawler.util.HttpCookieUtils;
 import com.zrk1000.crawler.visitor.http.*;
 import com.zrk1000.crawler.visitor.okhttp.OKHttpPool;
-import com.zrk1000.crawler.visitor.okhttp.OkHttpMemoryCookieJar;
 import com.zrk1000.crawler.visitor.okhttp.OkHttpSessionCookieJar;
 import okhttp3.*;
 import okhttp3.internal.Util;
+import okhttp3.internal.http.HttpDate;
 import okhttp3.internal.http.HttpMethod;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,11 +20,11 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * 网络访问器-okhttp实现
@@ -33,8 +33,6 @@ import java.util.concurrent.TimeUnit;
 public class OkHttpVisitor implements Visitor, SessionAware, TicketAware {
 
     private Logger logger = LoggerFactory.getLogger(OkHttpVisitor.class);
-
-    public static final String COOKIE_KEY = "MyCookie";
 
     private OkHttpClient.Builder clientBuilder;
     private ProxyFactory proxyFactory;
@@ -55,9 +53,12 @@ public class OkHttpVisitor implements Visitor, SessionAware, TicketAware {
 
     public OkHttpVisitor(OKHttpPool okHttpPool) {
         this.clientBuilder = okHttpPool.getClientBuilder();
-        this.cookieJar = new OkHttpMemoryCookieJar();
     }
 
+    /**
+     * 初始化 OkHttpClient.Builder
+     * 每次参数变动后，调用此方法进行初始化
+     */
     private void initClient() {
         OkHttpClient.Builder builder = clientBuilder
                 .readTimeout(readTimeout, TimeUnit.SECONDS)
@@ -124,18 +125,22 @@ public class OkHttpVisitor implements Visitor, SessionAware, TicketAware {
 
     /**
      * 访问器入口方法
+     *
      * @param httpRequest
      * @return
      */
     @Override
     public HttpResponse visit(HttpRequest httpRequest) {
-        //请求转换
+        /**请求转换*/
         Request request = transformHttpRequest(httpRequest);
-        //构建原生的okHttpClient，并附加代理
-        OkHttpClient okHttpClient = httpRequest.getProxy() == null ? clientBuilder.build() :
-                clientBuilder.build().newBuilder().proxy(transformProxy(httpRequest.getProxy())).build();
+        /**构建原生的okHttpClient，并附加代理*/
+        OkHttpClient okHttpClient = clientBuilder.build();
+        if (httpRequest.getProxy() != null) {
+            session.setProxy(proxy);
+            okHttpClient = okHttpClient.newBuilder().proxy(transformProxy(httpRequest.getProxy())).build();
+        }
         logger.debug("start request>>>>>>>>>>>>>>>>>>>>>");
-        //发起请求
+        /**发起请求*/
         Response response = getResponse(okHttpClient, request);
         logger.debug("end request<<<<<<<<<<<<<<<<<<<<");
         return transformResponse(response, httpRequest);
@@ -166,19 +171,23 @@ public class OkHttpVisitor implements Visitor, SessionAware, TicketAware {
         HttpResponse httpResponse = new HttpResponse(code, contentType, content);
         httpResponse.charset(charset);
         httpResponse.request(httpRequest);
+        httpResponse.setHeaders(response.headers().toMultimap());
         return httpResponse;
     }
 
     /**
      * 将自定义的请求对象转换为okhttp的请求对象
+     *
      * @param httpRequest
      * @return
      */
     private Request transformHttpRequest(HttpRequest httpRequest) {
         Request.Builder requestBuilder = new Request.Builder();
-        //将自定义的请求头转换为okhttp的请求头
+        /**本次请求中的自定义cookies放到session中，请求时cookieJar从session取出使用*/
+        warpHttpCookies(httpRequest.getUrl(), httpRequest.getCookies());
+        /**将自定义的请求头转换为okhttp的请求头*/
         if (httpRequest.getHeaders() != null && !httpRequest.getHeaders().isEmpty() || httpRequest.getCookies() != null && !httpRequest.getCookies().isEmpty()) {
-            requestBuilder.headers(transMapToHeaders(httpRequest.getHeaders(), httpRequest.getCookies()));
+            requestBuilder.headers(transMapToHeaders(httpRequest.getHeaders()));
         }
         String method = httpRequest.getMethod();
         RequestBody requestBody = null;
@@ -188,22 +197,22 @@ public class OkHttpVisitor implements Visitor, SessionAware, TicketAware {
             }
             HttpRequestBody httpRequestBody = httpRequest.getRequestBody();
             MediaType mediaType = MediaType.parse(httpRequestBody.getContentType());
-            //普通form表单请求
+            /**普通form表单请求*/
             if (mediaType.equals(MediaType.parse(HttpRequestBody.ContentType.FORM))) {
                 FormBody.Builder builder = new FormBody.Builder();
                 if (httpRequestBody.getCharset() != null) {
-                    //若设置字符集，进行编码
+                    /**若设置字符集，进行编码*/
                     httpRequestBody.getParams().forEach((s, o) -> {
-                        builder.addEncoded(s, urlEncode(String.valueOf(o),httpRequestBody.getCharset()));
+                        builder.addEncoded(s, urlEncode(String.valueOf(o), httpRequestBody.getCharset()));
                     });
                 } else {
-                    //若未设置字符集，直接设置
+                    /**若未设置字符集，直接设置*/
                     httpRequestBody.getParams().forEach((s, o) -> {
                         builder.add(s, String.valueOf(o));
                     });
                 }
                 requestBody = builder.build();
-            //处理multipart/form-data格式请求，参数放在HttpRequestBody的params中
+                /**处理multipart/form-data格式请求，参数放在HttpRequestBody的params中*/
             } else if (mediaType.equals(MediaType.parse(HttpRequestBody.ContentType.MULTIPART))) {
                 MultipartBody.Builder builder = new MultipartBody.Builder().setType(MultipartBody.FORM);
                 if (httpRequestBody.getParams() != null) {
@@ -215,22 +224,22 @@ public class OkHttpVisitor implements Visitor, SessionAware, TicketAware {
                 }
 
             } else {
-                //其余的请求直接使用okhttp原生的RequestBody.create()进行构建
-                if(httpRequestBody.getBody() != null){
+                /**其余的请求直接使用okhttp原生的RequestBody.create()进行构建*/
+                if (httpRequestBody.getBody() != null) {
                     requestBody = RequestBody.create(mediaType, httpRequestBody.getBody());
-                }else  if(httpRequestBody.getParams() != null){
-                    requestBody = RequestBody.create(mediaType, map2queryStr(httpRequestBody.getParams(),httpRequestBody.getCharset()));
+                } else if (httpRequestBody.getParams() != null) {
+                    requestBody = RequestBody.create(mediaType, map2queryStr(httpRequestBody.getParams(), httpRequestBody.getCharset()));
                 }
             }
         }
-        //必需requestBody但requestBody为空的请求 赋值长度为0的请求体
+        /**必需requestBody但requestBody为空的请求 赋值长度为0的请求体*/
         if (requestBody == null && HttpMethod.requiresRequestBody(method)) {
             requestBody = RequestBody.create(null, Util.EMPTY_BYTE_ARRAY);
         }
-        //不需要requestBody的但requestBody不为空的请求 清空requestBody
+        /**不需要requestBody的但requestBody不为空的请求 清空requestBody*/
         if (requestBody != null && !HttpMethod.permitsRequestBody(method)) {
             String url = httpRequest.getUrl();
-            String urlParams = map2queryStr(httpRequest.getRequestBody().getParams() ,httpRequest.getCharset());
+            String urlParams = map2queryStr(httpRequest.getRequestBody().getParams(), httpRequest.getRequestBody().getCharset());
             url = url.contains("?") ? url + "&" + urlParams : url + "?" + urlParams;
             httpRequest.setUrl(url);
             requestBody = null;
@@ -239,6 +248,33 @@ public class OkHttpVisitor implements Visitor, SessionAware, TicketAware {
                 .url(httpRequest.getUrl())
                 .method(method, requestBody)
                 .build();
+    }
+
+    /**
+     * 本次请求中的自定义cookies放到session中，请求时cookieJar从session取出使用
+     *
+     * @param url
+     * @param myCookies
+     */
+    private void warpHttpCookies(String url, List<HttpCookie> myCookies) {
+        HttpUrl httpUrl = HttpUrl.parse(url);
+        if (httpUrl != null) {
+            Map<String, List<HttpCookie>> cookies = session.getCookies();
+            if (cookies != null) {
+                List<HttpCookie> httpCookies = cookies.get(httpUrl.host());
+                if (httpCookies != null && myCookies != null) {
+                    List<HttpCookie> newCookies = myCookies.stream().map(item -> {
+                        item.setDomain(httpUrl.host());
+                        item.setExpiresAt(HttpDate.MAX_DATE);
+                        return item;
+                    }).collect(Collectors.toList());
+                    httpCookies = HttpCookieUtils.addCookie(httpCookies, newCookies);
+                    cookies.put(httpUrl.host(), httpCookies);
+                    session.touch();
+                }
+
+            }
+        }
     }
 
     private String urlEncode(String url, String charset) {
@@ -252,38 +288,32 @@ public class OkHttpVisitor implements Visitor, SessionAware, TicketAware {
 
     /**
      * 将自定义的请求头转换为okhttp的请求头
+     *
      * @param header
-     * @param cookies
      * @return
      */
-    private Headers transMapToHeaders(Map<String, String> header, Map<String, String> cookies) {
+    private Headers transMapToHeaders(Map<String, String> header) {
         if (header == null || header.isEmpty()) {
             header = new HashMap();
         }
         Headers.Builder builder = new Headers.Builder();
-        if (cookies != null) {
-            List<String> cookieList = new ArrayList();
-            for (String cookieKey : cookies.keySet()) {
-                cookieList.add(new StringBuffer().append(cookieKey).append("=").append(cookies.get(cookieKey)).toString());
-            }
-            String cookieStr = StringUtils.join(cookieList, ";");
-            //将自定义的cookies赋值到自定义的请求头上，自定义key为：MyCookie
-            if (header.containsKey(COOKIE_KEY)) {
-                header.put(COOKIE_KEY, new StringBuffer().append(header.get(COOKIE_KEY)).append(";").append(cookieStr).toString());
-            } else {
-                header.put(COOKIE_KEY, cookieStr);
-            }
-        }
         header.forEach(builder::add);
         return builder.build();
     }
 
+    /**
+     * 发起网络请求
+     *
+     * @param okHttpClient
+     * @param request
+     * @return
+     */
     private Response getResponse(OkHttpClient okHttpClient, Request request) {
         try {
             return okHttpClient.newCall(request).execute();
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
-            throw CrawlerException.newInstance(658, "Network access failed , url : %s",request.url());
+            throw CrawlerException.newInstance(658, "Network access failed , url : %s", request.url());
         }
     }
 
@@ -303,16 +333,16 @@ public class OkHttpVisitor implements Visitor, SessionAware, TicketAware {
 
     @Override
     public void setTimeOut(Integer connectTimeout, Integer readTimeout, Integer writeTimeout) {
-        if(connectTimeout != null){
+        if (connectTimeout != null) {
             this.connectTimeout = connectTimeout;
         }
-        if( readTimeout != null){
+        if (readTimeout != null) {
             this.readTimeout = readTimeout;
         }
-        if(writeTimeout != null){
+        if (writeTimeout != null) {
             this.writeTimeout = writeTimeout;
         }
-        if(connectTimeout != null && readTimeout != null && writeTimeout != null){
+        if (connectTimeout != null && readTimeout != null && writeTimeout != null) {
             initClient();
         }
     }
@@ -391,9 +421,9 @@ public class OkHttpVisitor implements Visitor, SessionAware, TicketAware {
         }
         StringBuffer sb = new StringBuffer();
         for (Map.Entry<String, Object> entry : map.entrySet()) {
-            if(charset != null){
-                sb.append(entry.getKey() + "=" + urlEncode(String.valueOf(entry.getValue()),charset));
-            }else {
+            if (charset != null) {
+                sb.append(entry.getKey() + "=" + urlEncode(String.valueOf(entry.getValue()), charset));
+            } else {
                 sb.append(entry.getKey() + "=" + entry.getValue());
             }
             sb.append("&");

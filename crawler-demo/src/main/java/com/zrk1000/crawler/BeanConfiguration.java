@@ -14,7 +14,6 @@ import com.zrk1000.crawler.visitor.VisitorGenerator;
 import com.zrk1000.crawler.visitor.http.ProxyFactory;
 import com.zrk1000.crawler.visitor.okhttp.OKHttpPool;
 import com.zrk1000.crawler.visitor.okhttp.OkHttpLogger;
-import com.zrk1000.crawler.visitor.okhttp.interceptor.CookieInterceptor;
 import okhttp3.Interceptor;
 import okhttp3.logging.HttpLoggingInterceptor;
 import org.apache.commons.io.filefilter.NameFileFilter;
@@ -128,7 +127,6 @@ public class BeanConfiguration {
         visitorGenerator.setOkHttpPool(okHttpPool);
         visitorGenerator.setProxyFactory(proxyFactory);
         visitorGenerator.setNetworkInterceptors(new ArrayList() {{
-            add(new CookieInterceptor());
             add(networkInterceptor);
         }});
         return visitorGenerator;

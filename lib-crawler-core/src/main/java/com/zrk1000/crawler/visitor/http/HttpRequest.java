@@ -1,7 +1,9 @@
 package com.zrk1000.crawler.visitor.http;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -20,15 +22,13 @@ public class HttpRequest implements Serializable {
 
     private HttpRequestBody requestBody;
 
-    private Map<String, String> cookies = new HashMap<String, String>();
+    private List<HttpCookie> cookies = new ArrayList();
 
     private Map<String, String> headers = new HashMap<String, String>();
 
     private Proxy proxy;
 
     private int deep;
-
-    private String charset;
 
     public HttpRequest() {
     }
@@ -45,7 +45,7 @@ public class HttpRequest implements Serializable {
         setHeaders(builder.headers);
         setDeep(builder.deep);
         setProxy(builder.proxy);
-        setCharset(builder.charset);
+//        setCharset(builder.charset);
     }
 
     public static Builder newBuilder() {
@@ -101,7 +101,12 @@ public class HttpRequest implements Serializable {
     }
 
     public HttpRequest addCookie(String name, String value) {
-        cookies.put(name, value);
+        cookies.add(new HttpCookie(name,value));
+        return this;
+    }
+
+    public HttpRequest addCookie(HttpCookie cookie) {
+        cookies.add(cookie);
         return this;
     }
 
@@ -114,9 +119,14 @@ public class HttpRequest implements Serializable {
         return proxy;
     }
 
-    public Map<String, String> getCookies() {
+    public List<HttpCookie> getCookies() {
         return cookies;
     }
+
+    public void setCookies(List<HttpCookie> cookies) {
+        this.cookies = cookies;
+    }
+
 
     public Map<String, String> getHeaders() {
         return headers;
@@ -128,19 +138,6 @@ public class HttpRequest implements Serializable {
 
     public void setRequestBody(HttpRequestBody requestBody) {
         this.requestBody = requestBody;
-    }
-
-    public String getCharset() {
-        return charset;
-    }
-
-    public HttpRequest setCharset(String charset) {
-        this.charset = charset;
-        return this;
-    }
-
-    public void setCookies(Map<String, String> cookies) {
-        this.cookies = cookies;
     }
 
     public void setHeaders(Map<String, String> headers) {
@@ -170,11 +167,10 @@ public class HttpRequest implements Serializable {
         private String url;
         private String method;
         private HttpRequestBody requestBody;
-        private Map<String, String> cookies;
+        private List<HttpCookie> cookies;
         private Map<String, String> headers;
         private Proxy proxy;
         private int deep;
-        private String charset;
 
         private Builder() {
         }
@@ -225,16 +221,16 @@ public class HttpRequest implements Serializable {
             return this;
         }
 
-        public Builder cookies(Map<String, String> val) {
+        public Builder cookies(List<HttpCookie> val) {
             cookies = val;
             return this;
         }
 
         public Builder cookie(String key,String value) {
             if(this.cookies == null){
-                this.cookies = new HashMap();
+                this.cookies = new ArrayList();
             }
-            this.cookies.put(key,value);
+            this.cookies.add(new HttpCookie(key,value));
             return this;
         }
 
@@ -262,7 +258,11 @@ public class HttpRequest implements Serializable {
         }
 
         public Builder charset(String val) {
-            charset = val;
+            if(this.requestBody == null){
+                this.requestBody = new HttpRequestBody();
+                this.requestBody.setContentType(HttpRequestBody.ContentType.FORM);
+            }
+            requestBody.setCharset(val);
             return this;
         }
 

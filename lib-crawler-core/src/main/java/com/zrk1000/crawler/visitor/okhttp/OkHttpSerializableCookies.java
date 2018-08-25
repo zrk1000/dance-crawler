@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  * 支持jdk序列化的Cookies
@@ -13,10 +14,11 @@ import java.io.Serializable;
  * Date: 2017/8/23
  * Time: 14:47
  */
+@Deprecated
 public class OkHttpSerializableCookies implements Serializable {
 
     private transient Cookie cookies;
-//    private transient Cookie clientCookies;
+//    private transient HttpCookie clientCookies;
 
     public OkHttpSerializableCookies(Cookie cookies) {
         this.cookies = cookies;
@@ -68,6 +70,29 @@ public class OkHttpSerializableCookies implements Serializable {
         return "OkHttpSerializableCookies{" +
                 "cookies=" + cookies +
                 '}';
+    }
+
+    /**
+     * 名称相同即认为cookie相同
+     * @param o
+     * @return
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        OkHttpSerializableCookies cookies1 = (OkHttpSerializableCookies) o;
+        return Objects.equals(cookies.name(), cookies1.cookies.name());
+    }
+
+    /**
+     * 重写hashcode
+     * 名称相同即认为cookie相同
+     * @return
+     */
+    @Override
+    public int hashCode() {
+        return Objects.hash(cookies.name());
     }
 }
 

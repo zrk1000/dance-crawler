@@ -16,6 +16,7 @@ import java.util.Map;
  * 内存实现的CookieJar
  * Created by rongkang on 2017-08-20.
  */
+@Deprecated
 public class OkHttpMemoryCookieJar implements CookieJar {
 
     private static Logger logger = LoggerFactory.getLogger(OkHttpMemoryCookieJar.class);
@@ -35,7 +36,10 @@ public class OkHttpMemoryCookieJar implements CookieJar {
         if (logger.isDebugEnabled()) {
             logger.debug("\nwrite cookies:" + httpUrl.host() + " --> " + cookies);
         }
-        cookieStore.put(httpUrl.host(), cookies);
+
+        List<Cookie> oldCookies = cookieStore.get(httpUrl.host());
+        oldCookies = addCookie(oldCookies,cookies);
+        cookieStore.put(httpUrl.host(), oldCookies);
         //保存根域名cookie
         String rootDomain = RootDomainUtils.getRootDomain(httpUrl.host());
         List<Cookie> rootDomainCookieList = new ArrayList();
@@ -47,6 +51,18 @@ public class OkHttpMemoryCookieJar implements CookieJar {
         if (!rootDomainCookieList.isEmpty()) {
             cookieStore.put(rootDomain, rootDomainCookieList);
         }
+    }
+
+    private List<Cookie> addCookie(List<Cookie> oldCookies, List<Cookie> cookies) {
+        if(oldCookies == null){
+            return cookies;
+        }
+        cookies.stream().forEach(item -> {
+            if(!oldCookies.contains(item)){
+                oldCookies.add(item);
+            }
+        });
+        return oldCookies;
     }
 
     @Override

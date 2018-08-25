@@ -1,10 +1,13 @@
 package com.zrk1000.crawler.session;
 
+import com.zrk1000.crawler.visitor.http.HttpCookie;
 import com.zrk1000.crawler.visitor.http.Proxy;
 
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 代理session 支持即时同步session
@@ -115,7 +118,7 @@ public class ProxiedSession implements Session {
     }
 
     @Override
-    public Serializable getCookies() {
+    public Map<String,List<HttpCookie>> getCookies() {
         session = sessionDao.readSession(session.getId());
         if(session == null){
             return null;
@@ -124,7 +127,7 @@ public class ProxiedSession implements Session {
     }
 
     @Override
-    public void setCookies(Serializable o) {
+    public void setCookies(Map<String,List<HttpCookie>> o) {
         session = sessionDao.readSession(session.getId());
         session.setCookies(o);
         sessionDao.update(session);

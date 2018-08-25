@@ -11,8 +11,16 @@ import java.lang.annotation.*;
 @Inherited
 public @interface Process {
 
+    /**
+     * 方法名
+     * @return
+     */
     String method();
 
+    /**
+     * 所访问的目标网站的唯一标识
+     * @return
+     */
     String[] domain();
 
 }

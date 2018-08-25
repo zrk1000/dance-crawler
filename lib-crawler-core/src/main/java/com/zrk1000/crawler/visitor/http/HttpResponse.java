@@ -21,6 +21,10 @@ import com.zrk1000.crawler.util.CharsetDetector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * 自定义 http Response
  * User: zhouRongKang
@@ -38,6 +42,7 @@ public class HttpResponse {
     private String charset = null;
     private byte[] content = null;
     private Object obj = null;
+    private Map<String, List<String>> headers = new LinkedHashMap<String,List<String>>();
     private Page page;
 
     public HttpResponse(Integer code, String contentType, byte[] content){
@@ -115,5 +120,13 @@ public class HttpResponse {
 
     public void request(HttpRequest request) {
         this.request = request;
+    }
+
+    public Map<String, List<String>> getHeaders() {
+        return headers;
+    }
+
+    public void setHeaders(Map<String, List<String>> headers) {
+        this.headers = headers;
     }
 }

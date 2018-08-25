@@ -41,4 +41,22 @@ public class RootDomainUtils {
         return domain;
     }
 
+    /**
+     * 获取二级域名
+     *
+     * @param urlStr
+     * @return
+     */
+    public static String getSecondaryDomain(String urlStr) {
+        String rootDomain = RootDomainUtils.getRootDomain(urlStr);
+        if(rootDomain != null){
+            return "." + rootDomain;
+        }
+        return null;
+    }
+
+//    public static void main(String[] args) {
+//        String rootDomain = RootDomainUtils.getSecondaryDomain("www.gs.baidu.com");
+//        System.out.println(rootDomain);
+//    }
 }

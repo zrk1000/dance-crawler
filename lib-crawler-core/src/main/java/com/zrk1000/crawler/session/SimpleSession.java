@@ -1,12 +1,10 @@
 package com.zrk1000.crawler.session;
 
+import com.zrk1000.crawler.visitor.http.HttpCookie;
 import com.zrk1000.crawler.visitor.http.Proxy;
 
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 默认的session实现
@@ -21,7 +19,7 @@ public class SimpleSession implements Session {
     private Date lastAccessTime;
     private long timeout;
     private Proxy proxy;
-    private Serializable cookies;
+    private Map<String,List<HttpCookie>> cookies;
     private Map<String, Serializable> attributes ;
 
 
@@ -86,12 +84,12 @@ public class SimpleSession implements Session {
     }
 
     @Override
-    public Serializable getCookies() {
+    public Map<String,List<HttpCookie>> getCookies() {
         return cookies;
     }
 
     @Override
-    public void setCookies(Serializable cookies) {
+    public void setCookies(Map<String,List<HttpCookie>> cookies) {
         this.cookies = cookies;
     }
 

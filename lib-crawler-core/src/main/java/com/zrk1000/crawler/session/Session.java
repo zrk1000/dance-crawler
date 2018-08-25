@@ -1,10 +1,13 @@
 package com.zrk1000.crawler.session;
 
+import com.zrk1000.crawler.visitor.http.HttpCookie;
 import com.zrk1000.crawler.visitor.http.Proxy;
 
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 /**
  * session接口
@@ -36,8 +39,8 @@ public interface Session extends Serializable {
 
     void setProxy(Proxy proxy);
 
-    Serializable getCookies();
+    Map<String,List<HttpCookie>> getCookies();
 
-    void setCookies(Serializable o);
+    void setCookies(Map<String,List<HttpCookie>> o);
 
 }

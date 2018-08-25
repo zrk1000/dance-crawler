@@ -13,7 +13,7 @@ import java.util.UUID;
  */
 public class SimpleSessionManager implements SessionManager {
 
-    public static long DEFAULT_SESSION_TIMEOUT = 1 * 60 * 1000;
+    public static long DEFAULT_SESSION_TIMEOUT = 30 * 60 * 1000;
 
     /**
      * 启用session过期定时扫码
